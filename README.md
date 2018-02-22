@@ -2,6 +2,12 @@
 
 > A Vue.js project
 
+
+Requirements
+
+*  npm install rxjs --save
+*  npm install pixi.js --save
+
 ## Build Setup
 
 ``` bash

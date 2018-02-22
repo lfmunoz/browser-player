@@ -10,9 +10,12 @@
     "unit": "jest --config test/unit/jest.conf.js --coverage",
     "test": "npm run unit",
     "lint": "eslint --ext .js,.vue src test/unit",
+    "lint:fix": "npm run lint -- --fix",
     "build": "node build/build.js"
   },
   "dependencies": {
+    "pixi.js": "^4.7.0",
+    "rxjs": "^5.5.6",
     "vue": "^2.5.2"
   },
   "devDependencies": {
