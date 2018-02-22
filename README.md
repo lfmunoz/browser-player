@@ -8,6 +8,10 @@ Requirements
 *  npm install rxjs --save
 *  npm install pixi.js --save
 
+
+
+Uses Web Audio API
+
 ## Build Setup
 
 ``` bash

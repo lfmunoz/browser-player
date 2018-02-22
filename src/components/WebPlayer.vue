@@ -2,6 +2,9 @@
 <div>
   <h2>WebAmp</h2>
   <div id="pixi-div"></div>
+
+  <button @click="play">Play</button>
+  <button @click="stop">Stop</button>
 </div>
 </template>
 
@@ -9,6 +12,8 @@
 import * as PIXI from 'pixi.js'
 import Rx from 'rxjs/Rx'
 import AudioUtils from './AudioUtils'
+
+const interval$ = Rx.Observable.interval(1000)
 
 const maxBarCount = 98
 
@@ -27,14 +32,124 @@ const playerLineWidth = 2
 const mouseover$ = Rx.Observable.empty()
 const group = new PIXI.Container()
 
+// let audio, uuid
+let audioContext
+let audioBuffer
+
+const baseVolumeValue = 7.5
+const prefixCls = 'vue-sound'
+export const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx'.replace(/[xy]/g, function (c) {
+    let v, r
+    r = (Math.random() * 16) | 0
+    v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+export const convertTimeHHMMSS = val => {
+  let hhmmss = new Date(val * 1000).toISOString().substr(11, 8)
+  return hhmmss.indexOf('00:') === 0 ? hhmmss.substr(3) : hhmmss
+}
+
+let intervalSubscription
+
 export default {
-  name: 'WebPlayer',
+  name: 'vue-Webplayer',
   data () {
     return {
-      msg: 'Welcome to Your Vue.js App'
+      isMuted: false,
+      loaded: false,
+      connected: false,
+      playing: false,
+      paused: true,
+      progressStyle: '',
+      currentTime: undefined,
+      uuid: '0',
+      innerLoop: undefined,
+      audio: undefined,
+      totalDuration: 0,
+      hideVolumeSlider: false,
+      volumeValue: baseVolumeValue
     }
   }, // end of data
+  computed: {
+    duration: function () {
+      return this.audio ? convertTimeHHMMSS(this.totalDuration) : ''
+    },
+    playerId: function () {
+      return 'player-' + this.uuid
+    },
+    classes: function () {
+      return prefixCls
+    }
+  },
   methods: {
+    stop: function () {
+      this.currentTime = audioContext.currentTime
+      console.log('stop() ' + this.totalDuration)
+      console.log(this.currentTime)
+      audioContext.suspend()
+      this.playing = false
+      intervalSubscription.unsubscribe()
+      // this.paused = true
+      // this.audio.pause()
+      // this.audio.currentTime = 0
+    },
+    play: function () {
+      // audioCtx.state === 'running'
+      // else if(audioCtx.state === 'suspended'
+
+      console.log('play() ' + this.loaded)
+      if (this.connected === true) {
+        audioContext.resume()
+      } else {
+        var source = audioContext.createBufferSource() // creates a sound source
+        source.buffer = audioBuffer // tell the source which sound to play
+        source.connect(audioContext.destination) // connect the source to the context's destination (the speakers)
+        source.start(0)
+        this.connected = true
+      }
+
+      intervalSubscription = interval$.map(() => {
+        return audioContext.currentTime
+      }).subscribe(event => {
+        console.log(event)
+      })
+      // if (this.playing && !this.paused) return
+      // this.paused = false
+      // this.audio.play()
+      // this.playing = true
+    },
+    pause: function () {
+      this.paused = !this.paused
+      this.paused ? this.audio.pause() : this.audio.play()
+    },
+    getAudio: function () {
+      // return this.$el.querySelectorAll("audio")[0];
+      var xhr = new XMLHttpRequest()
+      xhr.open('GET', 'http://jplayer.org/audio/m4a/Miaow-07-Bubble.m4a')
+      xhr.responseType = 'blob'
+      // xhr.responseType = 'arraybuffer';
+      xhr.onload = () => {
+        audioContext = new AudioContext()
+
+        AudioUtils.blob_to_uint8arr(xhr.response).then(result => {
+          this.create_lines(result)
+        })
+        AudioUtils.blob_to_arraybuffer(xhr.response).then(result => {
+          audioContext.decodeAudioData(result, (buf) => {
+            audioBuffer = buf
+            this.totalDuration = buf.duration
+            console.log('duration...')
+            console.log(buf.duration)
+            this.loaded = true
+          })
+        })
+      }
+      xhr.send()
+    },
+
     click: function (evt) {
       console.log(evt)
       console.log('wtf')
@@ -110,19 +225,7 @@ export default {
   }, // end of methods()
 
   mounted () {
-    var xhr = new XMLHttpRequest()
-
-    xhr.open('GET', 'http://jplayer.org/audio/m4a/Miaow-07-Bubble.m4a')
-
-    xhr.responseType = 'blob'
-
-    xhr.onload = () => {
-      AudioUtils.blob_to_uint8arr(xhr.response).then(result => {
-        this.create_lines(result)
-      })
-    }
-
-    xhr.send()
+    this.uuid = generateUUID()
 
     console.log(PIXI)
 
@@ -139,6 +242,9 @@ export default {
       antialias: true
     })
     document.getElementById('pixi-div').appendChild(this.app.view)
+
+    this.getAudio()
+
     /*
     this.create_lines([
       10,

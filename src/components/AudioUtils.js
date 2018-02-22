@@ -1,13 +1,27 @@
 
 export default {
   /*
-  convert a Blob into a Uint8Array
+  convert a Blob into Uint8Array
   */
   blob_to_uint8arr: function (blob) {
     return new Promise((resolve) => {
       var fileReader = new FileReader()
       fileReader.onload = event => {
         resolve(new Uint8Array(event.target.result))
+      }
+      fileReader.readAsArrayBuffer(blob)
+    })
+  },
+  /*
+  convert a Blob into ArrayBuffer
+  */
+  blob_to_arraybuffer: function (blob) {
+    return new Promise((resolve) => {
+      var fileReader = new FileReader()
+      fileReader.onload = event => {
+        console.log('onload from blob_to_arraybuffer')
+        console.log(event.target.result)
+        resolve(event.target.result)
       }
       fileReader.readAsArrayBuffer(blob)
     })
