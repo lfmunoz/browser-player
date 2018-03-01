@@ -14,6 +14,7 @@
     "build": "node build/build.js"
   },
   "dependencies": {
+    "material-icons": "^0.1.0",
     "pixi.js": "^4.7.0",
     "rxjs": "^5.5.6",
     "vue": "^2.5.2"

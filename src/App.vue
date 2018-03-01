@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <web-player/>
+    <web-player title="My Title" subtitle="My Subtitle"></web-player>
   </div>
 </template>
 
