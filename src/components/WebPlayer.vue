@@ -13,9 +13,12 @@
 <p> Playing: {{playing}} </p>
 <p> totalDuration : {{totalDuration}} </p>
 <p> currentTime: {{currentTime}} </p>
-<p> currentPosition: {{currentPosition}}
+<p> currentPosition: {{currentPosition}}</p>
+<p> timeOffset: {{timeOffset}}</p>
   <div id="pixi-div"></div>
 
+
+<button @click="click">Test</button>
 
 </div>
 </template>
@@ -85,7 +88,7 @@ const pauseSvg = "/static/ic_pause_black_24px.svg";
 export default {
   name: "vue-Webplayer",
   // a child component needs to explicitly declare props it expects to receive
-  props: ["title", "subtitle"],
+  props: ["ctx", "title", "subtitle"],
   data() {
     return {
       playBtnSrc: playSvg,
@@ -101,6 +104,7 @@ export default {
       audio: undefined,
       totalDuration: 0,
       currentTime: 0,
+      timeOffset: 0,
       hideVolumeSlider: false,
       volumeValue: baseVolumeValue
     };
@@ -142,21 +146,36 @@ export default {
     },
     exec_stop: function() {
       this.playBtnSrc = playSvg;
-      this.currentTime = audioContext.currentTime;
-      console.log("set by stop " + this.currentTime);
+      this.timeOffset = this.ctx.currentTime;
+      console.log("stop @" + this.timeOffset);
       if (true === this.playing) {
-        source.stop();
+        source.stop(this.ctx.currentTime);
         console.log("unsubscribe")
-        // intervalSubscription.unsubscribe();
+        intervalSubscription.unsubscribe();
       }
       this.playing = false;
     },
     exec_play: function() {
       this.playBtnSrc = pauseSvg;
-      source = audioContext.createBufferSource(); // creates a sound source
+      source = this.ctx.createBufferSource(); // creates a sound source
       source.buffer = audioBuffer; // tell the source which sound to play
-      source.connect(audioContext.destination); // connect the source to the context's destination (the speakers)
-      source.start(0, this.currentTime);
+      source.connect(this.ctx.destination); // connect the source to the context's destination (the speakers)
+      console.log("start @ " + this.timeOffset)
+      // source.start(AudioContext.currentTime, this.timeOffset);
+      source.start(this.ctx.currentTime, this.timeOffset);
+
+     intervalSubscription = interval$
+        .map(() => {
+          return this.ctx.currentTime;
+        })
+        .subscribe(currentTime => {
+          // console.log(event);
+          this.currentTime = currentTime;
+          console.log("set by internval " + this.currentTime);
+          // this.set_histogram_alpha(this.get_position(currentTime));
+        });
+
+
 
       source.onended = () => {
         console.log("sound ended");
@@ -168,31 +187,30 @@ export default {
       this.playing = true;
     },
     getAudio: function() {
+
+var audio = new Audio();
+audio.src = 'http://jplayer.org/audio/m4a/Miaow-07-Bubble.m4a';
+audio.controls = true;
+audio.autoplay = true;
+document.body.appendChild(audio);
+
+
+/*
       // return this.$el.querySelectorAll("audio")[0];
       var xhr = new XMLHttpRequest();
       xhr.open("GET", "http://jplayer.org/audio/m4a/Miaow-07-Bubble.m4a");
       xhr.responseType = "blob";
       // xhr.responseType = 'arraybuffer';
       xhr.onload = () => {
-        audioContext = new AudioContext();
+        // audioContext = new AudioContext();
 
-     intervalSubscription = interval$
-        .map(() => {
-          return audioContext.currentTime;
-        })
-        .subscribe(currentTime => {
-          // console.log(event);
-          this.currentTime = currentTime;
-          console.log("set by internval " + this.currentTime);
-          // this.set_histogram_alpha(this.get_position(currentTime));
-        });
 
 
         AudioUtils.blob_to_uint8arr(xhr.response).then(result => {
           this.create_lines(result);
         });
         AudioUtils.blob_to_arraybuffer(xhr.response).then(result => {
-          audioContext.decodeAudioData(result, buf => {
+          this.ctx.decodeAudioData(result, buf => {
             audioBuffer = buf;
             this.totalDuration = buf.duration;
             console.log("duration...");
@@ -202,10 +220,12 @@ export default {
         });
       };
       xhr.send();
+
+      */
     },
 
     click: function(evt) {
-      console.log(evt);
+      console.log(this.ctx);
       console.log("wtf");
     },
 
@@ -271,8 +291,7 @@ export default {
           // don't repeat yourself vialation
 
           this.exec_stop();
-          this.currentTime = this.get_time(index);
-          console.log("set by button click" + this.currentTime);
+          this.timeOffset = this.get_time(index);
           this.exec_play();
           // console.log(index);
         });
