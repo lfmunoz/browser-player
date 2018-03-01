@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <web-player :ctx="audio" title="My Title" subtitle="My Subtitle"></web-player>
+    <web-player srcAttr='http://jplayer.org/audio/m4a/Miaow-07-Bubble.m4a' title="My Title" subtitle="My Subtitle"></web-player>
   </div>
 </template>
 

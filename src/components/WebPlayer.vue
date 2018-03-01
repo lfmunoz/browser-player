@@ -9,17 +9,13 @@
   <span> Subtitle: {{subtitle}} </span>
 
 
-<p> Loaded: {{loaded}} </p>
-<p> Playing: {{playing}} </p>
-<p> totalDuration : {{totalDuration}} </p>
-<p> currentTime: {{currentTime}} </p>
-<p> currentPosition: {{currentPosition}}</p>
-<p> timeOffset: {{timeOffset}}</p>
+<p> totalDuration : {{duration}} / {{currentAudioTime}}</p>
   <div id="pixi-div"></div>
 
-
-<button @click="click">Test</button>
-
+<p> currentTime: {{currentTime}} </p>
+<p> currentPosition: {{currentPosition}}</p>
+<p> Loaded: {{loaded}} </p>
+<p> Playing: {{playing}} </p>
 </div>
 </template>
 
@@ -73,12 +69,6 @@ export const convertTimeHHMMSS = val => {
   return hhmmss.indexOf("00:") === 0 ? hhmmss.substr(3) : hhmmss;
 };
 
-/*
-var beeSvg = "https://s3-us-west-2.amazonaws.com/s.cdpn.io/106114/bee.svg";
-var beeTexture = new PIXI.Texture.fromImage(beeSvg, undefined, undefined, 1.0)
-var bee = new PIXI.Sprite(beeTexture)
-app.stage.addChild(bee)
-*/
 
 let intervalSubscription;
 
@@ -88,7 +78,7 @@ const pauseSvg = "/static/ic_pause_black_24px.svg";
 export default {
   name: "vue-Webplayer",
   // a child component needs to explicitly declare props it expects to receive
-  props: ["ctx", "title", "subtitle"],
+  props: ["srcAttr", "title", "subtitle"],
   data() {
     return {
       playBtnSrc: playSvg,
@@ -98,13 +88,11 @@ export default {
       connected: false,
       playing: false,
       paused: true,
-      progressStyle: "",
       uuid: "0",
       innerLoop: undefined,
       audio: undefined,
       totalDuration: 0,
       currentTime: 0,
-      timeOffset: 0,
       hideVolumeSlider: false,
       volumeValue: baseVolumeValue
     };
@@ -121,12 +109,12 @@ export default {
     },
     currentPosition: function() {
       return Math.floor(this.currentTime / this.totalDuration * maxBarCount);
+    },
+    currentAudioTime: function() {
+      return this.audio ? convertTimeHHMMSS(this.currentTime) : "";
     }
   },
   methods: {
-    test: function() {
-      console.log("test clicked");
-    },
     get_position: function(time) {
       return Math.floor(time / this.totalDuration * maxBarCount);
     },
@@ -136,104 +124,35 @@ export default {
       return time;
     },
     play: function() {
-      console.log("this.playing " + this.playing);
-      console.log("druation" + this.totalDuration);
       if (false === this.playing) {
         this.exec_play();
       } else {
-        this.exec_stop();
+        this.exec_pause();
       }
     },
-    exec_stop: function() {
+    exec_pause: function() {
       this.playBtnSrc = playSvg;
-      this.timeOffset = this.ctx.currentTime;
-      console.log("stop @" + this.timeOffset);
+      this.audio.pause();
       if (true === this.playing) {
-        source.stop(this.ctx.currentTime);
-        console.log("unsubscribe")
         intervalSubscription.unsubscribe();
       }
       this.playing = false;
     },
     exec_play: function() {
       this.playBtnSrc = pauseSvg;
-      source = this.ctx.createBufferSource(); // creates a sound source
-      source.buffer = audioBuffer; // tell the source which sound to play
-      source.connect(this.ctx.destination); // connect the source to the context's destination (the speakers)
-      console.log("start @ " + this.timeOffset)
-      // source.start(AudioContext.currentTime, this.timeOffset);
-      source.start(this.ctx.currentTime, this.timeOffset);
-
-     intervalSubscription = interval$
+      this.audio.play();
+      intervalSubscription = interval$
         .map(() => {
-          return this.ctx.currentTime;
+          return this.audio.currentTime;
         })
         .subscribe(currentTime => {
-          // console.log(event);
-          this.currentTime = currentTime;
-          console.log("set by internval " + this.currentTime);
-          // this.set_histogram_alpha(this.get_position(currentTime));
+          this.currentTime = Math.floor(currentTime);
+          this.set_histogram_alpha(this.get_position(this.currentTime));
         });
-
-
-
-      source.onended = () => {
-        console.log("sound ended");
-      };
-      source.oncomplete = () => {
-        console.log("sound comple");
-      };
- 
       this.playing = true;
     },
-    getAudio: function() {
-
-var audio = new Audio();
-audio.src = 'http://jplayer.org/audio/m4a/Miaow-07-Bubble.m4a';
-audio.controls = true;
-audio.autoplay = true;
-document.body.appendChild(audio);
-
-
-/*
-      // return this.$el.querySelectorAll("audio")[0];
-      var xhr = new XMLHttpRequest();
-      xhr.open("GET", "http://jplayer.org/audio/m4a/Miaow-07-Bubble.m4a");
-      xhr.responseType = "blob";
-      // xhr.responseType = 'arraybuffer';
-      xhr.onload = () => {
-        // audioContext = new AudioContext();
-
-
-
-        AudioUtils.blob_to_uint8arr(xhr.response).then(result => {
-          this.create_lines(result);
-        });
-        AudioUtils.blob_to_arraybuffer(xhr.response).then(result => {
-          this.ctx.decodeAudioData(result, buf => {
-            audioBuffer = buf;
-            this.totalDuration = buf.duration;
-            console.log("duration...");
-            console.log(buf.duration);
-            this.loaded = true;
-          });
-        });
-      };
-      xhr.send();
-
-      */
-    },
-
-    click: function(evt) {
-      console.log(this.ctx);
-      console.log("wtf");
-    },
-
     // https://pixijs.download/v4.5.2/docs/PIXI.Graphics.html#lineStyle
     create_lines: function(data) {
-      console.log("ddddddddddddddddddddddddddddddddddddd");
-      console.log(`points = ${data.length}`);
-      // let points = this.clean_data(data);
 
       let widthClean = AudioUtils.data_append(data, maxBarCount);
       let points = AudioUtils.to_pixel_height(
@@ -290,20 +209,25 @@ document.body.appendChild(audio);
           //this.exec_stop();
           // don't repeat yourself vialation
 
-          this.exec_stop();
-          this.timeOffset = this.get_time(index);
+          this.exec_pause();
+          // this.timeOffset = this.get_time(index);
+          this.currentTime = this.get_time(index);
+          this.audio.currentTime = this.currentTime;
           this.exec_play();
           // console.log(index);
         });
 
       group.interactive = true;
       group.buttonMode = true;
+
+      /*
       group.mouseout = function(mouseData) {
         for (let i = 0; i < group.children.length; i++) {
           let child = group.getChildAt(i);
           child.alpha = 1;
         }
       };
+      */
 
       this.app.stage.addChild(group);
     }, // end of create_lines
@@ -317,60 +241,68 @@ document.body.appendChild(audio);
         child.alpha = 1;
       }
     },
-    create_controls: function() {
-      let pause = "/static/ic_pause_black_24px.svg";
-      let play = "/static/ic_play_arrow_black_24px.svg";
-      let repeat = "/static/ic_repeat_black_24px.svg";
-      let volume = "/static/ic_volume_down_black_24px.svg";
-      let voloff = "/static/ic_volume_off_black_24px.svg";
-      // let stop = '/static/ic_stop_black_24px.svg'
+    /*
+      Once we have audio data, we configure our player
+    */
+    configure_audio: function(blob) {
+        this.audio.onloadeddata = event => {
+          this.totalDuration = this.audio.duration;
+        };
+        AudioUtils.blob_to_uint8arr(blob).then(result => {
+          this.create_lines(result);
+          this.loaded = true;
+        });
+        this.audio.addEventListener("timeupdate", this._handle_time_update)
+    },
 
-      this.create_svg_sprite(pause, 0, controlsGroup, this.click);
-      this.create_svg_sprite(play, 20, controlsGroup, this.click);
-      this.create_svg_sprite(repeat, 40, controlsGroup, this.click);
-      this.create_svg_sprite(volume, 60, controlsGroup, this.click);
-      this.create_svg_sprite(voloff, 80, controlsGroup, this.click);
-      // imageUrl, crossorigin, scaleMode, sourceScale
-      /* eslint new-cap: ["error", { "newIsCap": false }] */
+    /*
+    Given a URL we pull the music file using an ajax request and we
+    receive a blob which we use to create a histrogram and is also
+    the source of the audio
+    */
+    pull_xhr: function(url) {
+      let xhr = new XMLHttpRequest();
+      //  xhr.open("GET", "http://jplayer.org/audio/m4a/Miaow-07-Bubble.m4a");
+      xhr.open("GET", url);
+      xhr.responseType = "blob";
 
-      this.app.stage.addChild(controlsGroup);
-    }, // end of create_controls
-    create_svg_sprite(svg, xposition, group, onClick) {
-      let texture = new PIXI.Texture.fromImage(svg, undefined, undefined, 0.8);
-      let sprite = new PIXI.Sprite(texture);
-      sprite.position.x = xposition;
-      sprite.position.y = yStartPosition;
-      sprite.interactive = true;
-      sprite.buttonMode = true;
-      sprite.on("click", onClick);
-      group.addChild(sprite);
+      xhr.onload = () => {
+        this.audio = new Audio();
+        let url = URL.createObjectURL(xhr.response);
+        // this.audio.src = 'http://jplayer.org/audio/m4a/Miaow-07-Bubble.m4a';
+        this.audio.src = url;
+        this.audio.controls = true;
+        this.audio.autoplay = false;
+        document.body.appendChild(this.audio);
+        this.configure_audio(xhr.response)
+      };
+      xhr.send();
+    },
+    /*
+      Function callback when time is updated
+    */
+    _handle_time_update: function(evt) {
+      this.currentTime = Math.floor(evt.target.currentTime);
     }
   }, // end of methods()
 
   mounted() {
     this.uuid = generateUUID();
-
-    console.log(PIXI);
-
     let type = "WebGL";
-
     if (!PIXI.utils.isWebGLSupported()) {
       type = "canvas";
     }
-
-    PIXI.utils.sayHello(type);
     this.app = new PIXI.Application({
       width: canvasWidth,
       height: canvasHeight,
       antialias: true
     });
-
     this.app.renderer.backgroundColor = 0x000fff;
-    console.log(this.app.renderer.backgroundColor);
     document.getElementById("pixi-div").appendChild(this.app.view);
-
-    this.create_controls();
-    this.getAudio();
+    // process audio data
+    if (typeof this.srcAttr === "string") {
+      this.pull_xhr(this.srcAttr)
+    } 
   } // end of mounted
 };
 </script>
