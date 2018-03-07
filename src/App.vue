@@ -1,30 +1,30 @@
 <template>
   <div id="app">
-    <web-player srcAttr='http://jplayer.org/audio/m4a/Miaow-07-Bubble.m4a' title="My Title" subtitle="My Subtitle"></web-player>
+    <web-player srcAttr='http://jplayer.org/audio/m4a/Miaow-07-Bubble.m4a' title="Lana Del Rey - Love" subtitle="March 10, 2017"></web-player>
   </div>
 </template>
 
 <script>
 // import HelloWorld from './components/HelloWorld'
-import WebPlayer from "./components/WebPlayer";
+import WebPlayer from './components/WebPlayer'
 
 var audioContext =
-  typeof audioContext !== "undefined" ? audioContext : new AudioContext();
+  typeof audioContext !== 'undefined' ? audioContext : new AudioContext()
 
-console.log("audi..");
-console.log(audioContext);
+console.log('audi..')
+console.log(audioContext)
 
 export default {
-  name: "App",
+  name: 'App',
   components: {
-    "web-player": WebPlayer
+    'web-player': WebPlayer
   },
-  data() {
+  data () {
     return {
       audio: audioContext
-    };
+    }
   }
-};
+}
 </script>
 
 <style>
